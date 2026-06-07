@@ -34,11 +34,21 @@ fi
 uv venv --python 3.12 ~/disagg-venv
 source ~/disagg-venv/bin/activate
 
-# --- 3) vLLM (CUDA 12.9 wheel index) -----------------------------------
-echo "--- Installo vLLM (wheel CUDA 12.x) ---"
-uv pip install vllm \
+# --- 3) vLLM (CUDA 12.9 wheel index, versione pinnata) -----------------
+echo "--- Installo vLLM 0.21.0 (wheel CUDA 12.x) ---"
+uv pip install vllm==0.21.0 \
     --extra-index-url https://download.pytorch.org/whl/cu129 \
     --index-strategy unsafe-best-match
+
+# --- 3b) vLLM source tree allineato alla wheel (esempi disaggregated + benchmarks) ---
+# Necessario: arm_b usa examples/disaggregated/lmcache/..., run_benchmark usa benchmarks/.
+# Stesso tag della wheel => API runtime e script-esempio combaciano per costruzione.
+echo "--- Clono vLLM source @ v0.21.0 (stesso tag della wheel) ---"
+if [ ! -d ~/vllm-src ]; then
+    git clone --depth 1 --branch v0.21.0 https://github.com/vllm-project/vllm.git ~/vllm-src
+else
+    echo "~/vllm-src gia' presente (salto il clone)"
+fi
 
 # --- 4) LMCache + NIXL --------------------------------------------------
 echo "--- Installo LMCache ---"
@@ -72,5 +82,5 @@ python3 -c "from huggingface_hub import snapshot_download; snapshot_download('me
 echo "================ SETUP COMPLETO ================"
 echo "venv:        ~/disagg-venv (source ~/disagg-venv/bin/activate)"
 echo "inferscope:  ~/inferscope-src/target/release/inferscope"
-echo "vLLM repo:   ~/vllm-src (per benchmarks/ ed esempi disaggregated)"
+echo "vLLM repo:   ~/vllm-src (esempi disaggregated + benchmarks, @ v0.21.0)"
 echo "Prossimo: lanciare le arm via gli script in ~/disagg-experiment/"
