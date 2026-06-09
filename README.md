@@ -2,24 +2,38 @@
 
 An A/B profiling experiment comparing **aggregated** (tensor-parallel) vs
 **disaggregated** (1-prefiller / 1-decoder) LLM serving on equal hardware
-(2 GPUs), measuring the per-device power/utilisation asymmetry between the
-prefill and decode phases under load.
+(2× H100 80GB), measuring the per-device power/utilisation asymmetry between
+the prefill and decode phases under load.
 
 ## Method
 
 - **Arm A — Aggregated (TP=2):** one vLLM instance, tensor-parallel across 2 GPUs.
-- **Arm B — Disaggregated (1P1D):** prefiller on GPU0 + decoder on GPU1 + proxy, KV cache transferred over NIXL/LMCache.
-- **Load:** `vllm bench serve`, three regimes (prefill-heavy / balanced / decode-heavy), identical parameters across arms.
-- **Measurement (three views):** client-side (throughput, TTFT, TPOT, p50/p99), server-side per-device GPU (inferscope `--sample-only --gpu`), and KV-transfer cost where observable.
+- **Arm B — Disaggregated (1P1D):** prefiller on GPU0 + decoder on GPU1 + proxy, KV cache transferred over NIXL/LMCache (`LMCacheConnectorV1`).
+- **Load:** `vllm bench serve`, random dataset, 200 prompts at 3.6 req/s, three regimes (prefill-heavy 7500/200, balanced 2000/2000, decode-heavy 500/4000), identical parameters across arms.
+- **Measurement (three views):** client-side (throughput, TTFT, TPOT, p99), server-side per-device GPU (inferscope `--sample-only --gpu`), and the gap between them.
 
-Model: Llama-3.1-8B-Instruct. Both arms use `--enforce-eager` for comparability.
+Engine: vLLM 0.21.0. Model: Qwen2.5-7B-Instruct. Both arms use `--enforce-eager` for comparability.
 
-## Hypothesis
+## Results
 
-Disaggregation isolates prefill (compute-bound, ~70–100% GPU power) from
-decode (memory-bound, ~20–40% GPU power). The experiment measures whether,
-at equal hardware, disaggregation wins — and what the per-device view reveals
-about hardware-utilisation cost (a potentially under-used decode GPU).
+Disaggregation imposes a latency tax in every regime and never improves
+throughput at this scale (1P1D, equal hardware). What it buys is **phase
+isolation** — visible only per-device as a power asymmetry that grows
+monotonically with the decode share of the workload.
+
+| Regime | Throughput (disagg vs agg) | TTFT mean (agg → disagg) | Per-device power ratio (disagg) |
+|---|---|---|---|
+| prefill-heavy | tie (~26.7k tok/s) | 148 → 443 ms (p99 → 1056 ms) | 1.22× |
+| balanced | −1.6% | 62 → 142 ms | 2.48× |
+| decode-heavy | **−11%** | 43 → 80 ms | **3.66×** |
+
+In decode-heavy the disaggregated prefiller drops to **1% utilisation / 127 W**
+(idle) while the decoder runs at **70% / 466 W** — a stranded GPU that appears
+nowhere in the client output. The aggregated arm stays symmetric (1.00×) in all
+regimes. Zero failed requests across all six runs.
+
+Full analysis: see the [write-up](https://github.com/MicheleCampi/vllm-disagg-profiling).
+Raw results in `results/` (six inferscope JSON + benchmark logs).
 
 ## Scripts
 
@@ -30,7 +44,7 @@ about hardware-utilisation cost (a potentially under-used decode GPU).
 
 ## Status
 
-Work in progress — setup and scripts prepared; GPU execution pending.
+Complete — both arms executed on 2× H100, six runs profiled. Results in `results/`.
 
 ## Tooling
 
