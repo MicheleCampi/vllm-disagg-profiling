@@ -42,6 +42,20 @@ Raw results in `results/` (six inferscope JSON + benchmark logs).
 - `arm_b_disaggregated.sh` — launches the disaggregated 1P1D servers (reuses upstream vLLM/LMCache example).
 - `run_benchmark.sh` — measurement orchestrator: runs inferscope + `vllm bench serve`, identical for both arms.
 
+## Reproducibility
+
+Validated on a single Lambda Cloud node, **2× H100 80GB SXM5**, CUDA 12.x.
+
+Verified stack (see `setup.sh`):
+- **vLLM 0.22.1 (cu12)**, installed via `uv pip install "vllm" --torch-backend=auto`. Note: do *not* pin `0.21.0` — its only PyPI wheel is cu13 and breaks on a cu12 stack.
+- **Qwen2.5-7B-Instruct** (public, no HF token).
+- **DeepGEMM disabled** (`VLLM_USE_DEEP_GEMM=0`): Qwen runs in bf16, and the FP8 backend probe otherwise aborts startup. Applied to the upstream disaggregation launcher by `setup.sh`.
+- **NIXL forced to the cu12 variant**: installing LMCache pulls cu13 variants that conflict with the cu12 stack.
+
+Flow: `clone → setup.sh → arm_a_aggregated.sh | arm_b_disaggregated.sh → run_benchmark.sh <arm> <port> <regime>`.
+
+> Honesty note: the NIXL→cu12 step is the verified cure for the LMCache-cu13 conflict, but the exact resolution was not re-tested end-to-end after the experiment. If the disaggregated arm fails to start on a fresh node, check the NIXL variant first.
+
 ## Status
 
 Complete — both arms executed on 2× H100, six runs profiled. Results in `results/`.
