@@ -16,7 +16,7 @@ if [[ -z "$ARM_LABEL" || -z "$PORT" || -z "$REGIME" ]]; then
     exit 1
 fi
 
-MODEL="meta-llama/Llama-3.1-8B-Instruct"
+MODEL="Qwen/Qwen2.5-7B-Instruct"
 
 # Parametri di carico (default = prefill-heavy come esempio upstream; override via env)
 INPUT_LEN=${INPUT_LEN:-7500}

@@ -28,10 +28,10 @@ cd "$LMCACHE_DIR"
 echo "=== ARM B: Disaggregated 1P1D (prefiller GPU0 + decoder GPU1 + proxy:9000) ==="
 echo "Launching prefiller, decoder, proxy. Logs: prefiller.log decoder.log proxy.log"
 
-bash disagg_vllm_launcher.sh prefiller > >(tee prefiller.log) 2>&1 &
+bash disagg_vllm_launcher.sh prefiller Qwen/Qwen2.5-7B-Instruct > >(tee prefiller.log) 2>&1 &
 PIDS+=("$!")
 
-bash disagg_vllm_launcher.sh decoder > >(tee decoder.log) 2>&1 &
+bash disagg_vllm_launcher.sh decoder Qwen/Qwen2.5-7B-Instruct > >(tee decoder.log) 2>&1 &
 PIDS+=("$!")
 
 python3 disagg_proxy_server.py \
