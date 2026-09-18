@@ -4,7 +4,7 @@
 # Parametri di carico IDENTICI all'esempio disaggregated per confronto equo.
 set -e
 
-MODEL="meta-llama/Llama-3.1-8B-Instruct"
+MODEL="Qwen/Qwen2.5-7B-Instruct"
 
 # Carico: passato come argomenti, default = regime prefill-heavy (come esempio upstream)
 INPUT_LEN=${INPUT_LEN:-7500}

@@ -12,7 +12,7 @@ the prefill and decode phases under load.
 - **Load:** `vllm bench serve`, random dataset, 200 prompts at 3.6 req/s, three regimes (prefill-heavy 7500/200, balanced 2000/2000, decode-heavy 500/4000), identical parameters across arms.
 - **Measurement (three views):** client-side (throughput, TTFT, TPOT, p99), server-side per-device GPU (inferscope `--sample-only --gpu`), and the gap between them.
 
-Engine: vLLM 0.21.0. Model: Qwen2.5-7B-Instruct. Both arms use `--enforce-eager` for comparability.
+Engine: vLLM 0.22.1 (cu12), as stated in commit `6ffd953`; the installed version is not logged in `results/`. Model: Qwen2.5-7B-Instruct. Both arms use `--enforce-eager` for comparability.
 
 ## Results
 
@@ -55,6 +55,8 @@ Verified stack (see `setup.sh`):
 Flow: `clone → setup.sh → arm_a_aggregated.sh | arm_b_disaggregated.sh → run_benchmark.sh <arm> <port> <regime>`.
 
 > Honesty note: the NIXL→cu12 step is the verified cure for the LMCache-cu13 conflict, but the exact resolution was not re-tested end-to-end after the experiment. If the disaggregated arm fails to start on a fresh node, check the NIXL variant first.
+
+> Not in this repository: the server logs (`aggregated_server.log`, `prefiller.log`, `decoder.log`, `proxy.log`) are not committed, and environment variables or arguments set by hand on the node, outside these scripts, would leave no trace here.
 
 ## Status
 
