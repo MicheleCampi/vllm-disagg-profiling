@@ -32,7 +32,33 @@ In decode-heavy the disaggregated prefiller drops to **1% utilisation / 127 W**
 nowhere in the client output. The aggregated arm stays symmetric (1.00×) in all
 regimes. Zero failed requests across all six runs.
 
-Full analysis: see the [write-up](https://github.com/MicheleCampi/vllm-disagg-profiling).
+### What these numbers rest on
+
+- **One run per cell.** Each arm × regime cell ran once, so none of these
+  figures has a variance estimate.
+- **Measurement windows differ between cells.** `run_benchmark.sh` samples for
+  `SAMPLE_DURATION` seconds, 300 by default; the window was set per run, and
+  although the script's comment planned to trim it in analysis, it was not
+  trimmed. Every per-device figure is a mean over the whole window, idle tail
+  included. The share of each window the benchmark occupied (window from
+  `duration_secs` in the inferscope JSON, benchmark from its log):
+
+| Cell | Window (s) | Benchmark (s) | Busy |
+|---|---|---|---|
+| Aggregated, prefill-heavy | 300 | 57.72 | 19.2% |
+| Aggregated, balanced | 90 | 76.30 | 84.8% |
+| Aggregated, decode-heavy | 150 | 97.59 | 65.1% |
+| Disaggregated, prefill-heavy | 90 | 57.75 | 64.2% |
+| Disaggregated, balanced | 120 | 77.51 | 64.6% |
+| Disaggregated, decode-heavy | 150 | 109.46 | 73.0% |
+
+So absolute power means are not comparable across cells, and the decoder's
+70% / 466 W in decode-heavy is a mean over a window the benchmark filled for
+73.0%. The per-device ratio is less exposed, because both devices share the
+window, but an idle tail still pulls it toward the idle ratio, by an amount
+that depends on the busy share.
+
+Full analysis: see the [write-up](https://michelecampi.github.io/observability/systems-engineering/llm-inference/2026/07/18/vllm-disagg-profiling-1p1d.html).
 Raw results in `results/` (six inferscope JSON + benchmark logs).
 
 ## Scripts
@@ -51,6 +77,15 @@ Verified stack (see `setup.sh`):
 - **Qwen2.5-7B-Instruct** (public, no HF token).
 - **DeepGEMM disabled** (`VLLM_USE_DEEP_GEMM=0`): Qwen runs in bf16, and the FP8 backend probe otherwise aborts startup. Applied to the upstream disaggregation launcher by `setup.sh`.
 - **NIXL forced to the cu12 variant**: installing LMCache pulls cu13 variants that conflict with the cu12 stack.
+- **inferscope `6496768`, reconstructed.** The commit was not recorded at run
+  time: `setup.sh` clones inferscope's default branch with `--depth 1` and
+  builds it (lines 85-94). `6496768` (2026-06-04) introduced `--sample-only`,
+  which every run uses, and it is the last commit on inferscope's `main` before
+  the results commit `30d7709` (2026-06-08 18:25 UTC); the report fields
+  `per_device`, `include_descendants` and `duration_secs` exist at that commit.
+  This assumes a fresh node (`setup.sh` clones only when `~/inferscope-src` is
+  absent), a build without local changes, and commit dates that reflect when
+  the commits existed.
 
 Flow: `clone → setup.sh → arm_a_aggregated.sh | arm_b_disaggregated.sh → run_benchmark.sh <arm> <port> <regime>`.
 
