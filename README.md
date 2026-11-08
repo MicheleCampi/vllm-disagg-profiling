@@ -30,7 +30,10 @@ monotonically with the decode share of the workload.
 In decode-heavy the disaggregated prefiller drops to **1% utilisation / 127 W**
 (idle) while the decoder runs at **70% / 466 W** — a stranded GPU that appears
 nowhere in the client output. The aggregated arm stays symmetric (1.00×) in all
-regimes. Zero failed requests across all six runs.
+regimes. Zero failed requests across all six runs. Each cell ran once, and
+per-device figures are means over a window that includes an idle tail (the
+decoder's decode-heavy window was 73.0% busy): see below before comparing
+absolute values.
 
 ### What these numbers rest on
 
